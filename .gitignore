@@ -1,0 +1,13 @@
+/original/
+/out/
+*.EXE
+*.COM
+*.BIN
+*.LST
+*.FDI
+*.HDM
+*.WL6
+*.REX
+__pycache__/
+*.pyc
+.DS_Store
