@@ -14,8 +14,9 @@ resources:
 - IRQ12 and DMA channel 1 resource routing
 - Sound ID `81h`
 
-The FM path targets the documented CanBe Sound 2 and YMF701 address and data
-ports `1488h` and `1489h`.
+The FM path targets the Cu10's YMF701 OPL3-SA1 compatibility interface at
+`1488h` through `148Bh`. Its initialization is transcribed from NEC/Yamaha's
+YMF701 Windows 95 driver for PC-9821 ValueStar systems.
 
 This repository contains no Wolfenstein 3D executable, game data, or patched
 floppy image. The build checks for one exact `WOLF98.EXE` and creates the
@@ -27,7 +28,7 @@ Wolfenstein 3D's IMF music and AdLib sound effects use the Yamaha YM3812
 register format, called OPL2. OPL2 provides nine two-operator melodic channels,
 or six melodic channels plus five percussion voices when rhythm mode is used.
 
-The PC-9821 Cu10 uses a Yamaha YMF701, also called OPL3-SA. Its integrated OPL3
+The PC-9821 Cu10 uses a Yamaha YMF701 OPL3-SA1. Its integrated OPL3
 synthesizer provides 18 two-operator melodic channels, or 15 melodic channels
 plus five percussion voices in rhythm mode. That second arrangement is the
 source of the Cu10's advertised 20-voice FM specification.
@@ -69,7 +70,7 @@ Python 3 and zsh are also required.
 
 ## Build the patch disk
 
-Place your original executable here:
+Place your original PC-98 files here:
 
 ```text
 original/WOLF98.EXE
@@ -83,18 +84,19 @@ Then run:
 ./build_wss_patch_disk.sh
 ```
 
-Use the registered audio files from an owned GOG or DOS release. The current
-build accepts the hashes from GOG installer `1.4 (28045)`. These files remain
-ignored by Git and are not distributed by this repository.
+The audio pair must come from the supported PC-98 release. It is restored by
+the installer so a previously tested DOS/GOG archive cannot remain mixed with
+the PC-98 executable. These files remain ignored by Git and are not distributed
+by this repository.
 
 The script creates:
 
 ```text
 out/WOLF98.EXE
-out/CU10-PAN.FDI
+out/CU10-SA1.FDI
 ```
 
-Copy `CU10-PAN.FDI` to a Gotek USB drive and select it with FastFloppy.
+Copy `CU10-SA1.FDI` to a Gotek USB drive and select it with FastFloppy.
 
 ## Install on the PC-9821
 
@@ -113,8 +115,8 @@ WOLF98
 
 `PATCH.BAT` also joins the split `VSWAP` and `98GRAPH` files produced by the
 four-disk installer used during development. Existing complete files are left
-alone. The installer replaces the executable and registered audio pair without
-retaining backups.
+alone. The installer replaces the executable and restores the matching PC-98
+audio pair without retaining backups.
 
 After starting Wolfenstein 3D, open its in-game Sound menu. Select Sound Blaster
 under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected for DIGITIZED SOUND.
@@ -143,11 +145,13 @@ eight original PCM entry points, the AdLib detector, and the AdLib register
 writer. It also adjusts the P3 size fields without moving the original stack.
 
 DMA completion is polled through Wolfenstein 3D's existing timer handlers. Codec
-interrupt generation stays disabled. The FM patch selects the Cu10's OPL3 mode
-and forwards each OPL2 register/value pair to `1488h/1489h`. Because
-that hardware remains in OPL3 mode, the patch adds both stereo-output bits to
-Wolfenstein 3D's `C0h` through `C8h` channel-control writes. All nine game
-voices retain their original frequencies, envelopes, operators, and waveforms.
+interrupt generation stays disabled. The FM patch performs the YMF701-specific
+PC-98 handoff, enables OPL3 NEW mode through the second bank, and forwards each
+OPL2 register/value pair to `1488h/1489h`. It preserves the game's original
+six address-delay reads and 42 data-delay reads so writes are not dropped. The
+patch also adds both stereo-output bits to Wolfenstein 3D's `C0h` through `C8h`
+channel-control writes. All nine game voices retain their original frequencies,
+envelopes, operators, and waveforms.
 See [technical notes](docs/technical-notes.md) for the hardware and extender
 details.
 

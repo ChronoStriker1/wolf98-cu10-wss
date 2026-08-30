@@ -21,7 +21,7 @@ DEL B:\WOLF3D\98GRA.00
 DEL B:\WOLF3D\98GRA.01
 :CHECKGRAPH
 IF NOT EXIST B:\WOLF3D\98GRAPH.WL6 GOTO NODATA
-ECHO Installing the registered GOG audio archive...
+ECHO Restoring the original PC-98 audio archive...
 IF NOT EXIST C:\AUDIOHED.WL6 GOTO NOAUDIO
 IF NOT EXIST C:\AUDIOT.WL6 GOTO NOAUDIO
 IF EXIST B:\WOLF3D\AUDIOHED.NEW DEL B:\WOLF3D\AUDIOHED.NEW
@@ -38,7 +38,7 @@ REN B:\WOLF3D\AUDIOHED.NEW AUDIOHED.WL6
 REN B:\WOLF3D\AUDIOT.NEW AUDIOT.WL6
 IF NOT EXIST B:\WOLF3D\AUDIOHED.WL6 GOTO AUDIORENAME
 IF NOT EXIST B:\WOLF3D\AUDIOT.WL6 GOTO AUDIORENAME
-ECHO Installing the Cu10 WSS and OPL2/YMF701 executable...
+ECHO Installing the Cu10 WSS and YMF701 OPL3 executable...
 IF NOT EXIST C:\WOLF98.EXE GOTO NOPATCH
 DEL B:\WOLF3D\WOLF98.EXE
 IF EXIST B:\WOLF3D\WOLF98.EXE GOTO OLDDELETE
@@ -62,10 +62,10 @@ GOTO END
 ECHO ERROR: C:\WOLF98.EXE is missing from the patch disk.
 GOTO END
 :NOAUDIO
-ECHO ERROR: The registered audio files are missing from the patch disk.
+ECHO ERROR: The PC-98 audio files are missing from the patch disk.
 GOTO END
 :AUDIOCOPY
-ECHO ERROR: The registered audio files could not be staged on B:.
+ECHO ERROR: The PC-98 audio files could not be staged on B:.
 GOTO END
 :AUDIORENAME
 ECHO ERROR: The staged audio files could not be renamed.

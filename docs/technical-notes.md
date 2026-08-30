@@ -55,17 +55,22 @@ Its low-level writer sends those register/value pairs to Sound
 Blaster-compatible ports `28D2h` and `29D2h`, which do not control the Cu10's
 onboard FM block.
 
-The replacement AdLib detector follows the CanBe Sound 2 and PC-9801-118
-extended-FM initialization sequence. It requests Sound ID `83h`, sets the
-routing controls at `0F4Ah/0F4Bh` and `148Ah/148Bh`, and performs the standard
-OPL timer test through `1488h/1489h`. The target Cu10 later reports `80h` to
-SIC, so the diagnostic value is not used as proof that the mode stayed active.
-The audible output and OPL timer response are the useful checks. This sequence
-comes from the [Laboratory for PC-9821 reference implementation](https://darudarudan.github.io/pc9821/pc9821.html).
+The original replacement detector incorrectly combined a CanBe/PC-9801-118
+sequence with the Cu10's YMF701. It selected Sound ID `83h`, overwrote the
+`0F4Bh` route register, treated `148Eh/148Fh` as an OPL control pair, wrote
+`F7h` to both the address and data ports, and never completed the OPL3 bank-1
+setup. Those operations have been removed.
+
+The current detector transcribes the PC-98 OPL3 handoff from NEC/Yamaha's
+YMF701 Windows 95 driver. Starting from the Cu10's Sound ID `81h`, it selects
+`82h`, preserves unrelated bits in `0F4Bh`, unlocks the second OPL bank at
+`148Ah/148Bh`, enables OPL3 NEW mode, disables four-operator pairing, and
+clears the timer and compatibility registers. It then performs the standard
+OPL timer test through `1488h/1489h`.
 
 Wolfenstein 3D uses the YM3812 or OPL2 register format. OPL2 provides nine
 two-operator melodic channels, or six melodic channels plus five percussion
-voices in rhythm mode. The YMF701, also called OPL3-SA, integrates an OPL3
+voices in rhythm mode. The YMF701 OPL3-SA1 integrates an OPL3
 synthesizer with two register banks. OPL3 provides 18 two-operator melodic
 channels, or 15 melodic channels plus five percussion voices in rhythm mode.
 The latter is the Cu10's advertised 20-voice FM configuration. This patch uses
@@ -79,16 +84,19 @@ output enables, which can mute complete melodic channels. The writer adds bits
 stereo outputs.
 It passes all other values unchanged, preserving the original frequency,
 envelope, multiplier, feedback, connection, level, and waveform values.
-Address and data writes use the delays required by the Yamaha OPL interface.
+Every music and AdLib-effect call site in this executable reaches the single
+writer hooked at load address `2E4A3h`: the audit found 37 direct calls and no
+second OPL output routine. The replacement preserves the original writer's six
+address-delay reads and 42 data-delay reads. The earlier 35-read delay was too
+short and could drop register writes, which presents as missing notes or whole
+instruments.
 
-## Registered audio replacement
+## PC-98 audio restoration
 
-The build disk includes `AUDIOHED.WL6` and `AUDIOT.WL6` extracted from the
-owner's GOG v1.4 installer. The GOG and PC-98 headers are byte-for-byte
-identical and describe the same 288 chunks. Both audio archives are 320,209
-bytes; only music chunks 273 through 276 differ. The installer stages the GOG
-pair under temporary names, removes the installed pair, and renames the staged
-files. It does not keep backups.
+The GOG-audio substitution was an unsuccessful diagnostic and has been removed.
+The build disk now carries the matching audio pair from the supported PC-98
+release. The installer stages that pair under temporary names, removes the
+installed pair, and renames the staged files. It does not keep backups.
 
 ## P3 modifications
 
@@ -102,3 +110,15 @@ The patcher accepts only the known SHA-256 hash. It changes:
 
 The original total memory boundary remains `8B001h`, so the appended driver does
 not move the program's initial stack.
+
+## Hardware references
+
+- [Yamaha YMF701 OPL3-SA1 product documentation](https://bitsavers.org/components/yamaha/YMF701_199510.pdf)
+  identifies the integrated YMF262-compatible OPL3 synthesizer, codec, and
+  mixer architecture.
+- [Linux's YMF701B OPL3-SA1 driver](https://github.com/torvalds/linux/blob/v2.6.16/sound/oss/opl3sa.c)
+  independently documents the password-protected controller and OPL3 synth
+  enable bit.
+- The [NEC/Yamaha PC-9821 ValueStar Windows 95 driver archive](https://lainnet.arcesia.net/repo/WIN95_V200.zip)
+  contains the PC-98-specific `A460h`, `0F4Ah/0F4Bh`, and `1488h` through
+  `148Bh` handoff transcribed by this patch.

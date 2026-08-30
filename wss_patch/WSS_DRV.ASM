@@ -30,8 +30,12 @@ org 0x7c000
 %define OPL_DATA            0x1489
 %define OPL_MODE_ADDRESS    0x148a
 %define OPL_MODE_DATA       0x148b
-%define OPL_CONTROL_ADDRESS 0x148e
-%define OPL_CONTROL_DATA    0x148f
+
+%macro IO_WAIT_3 0
+    out PC98_IO_WAIT, al
+    out PC98_IO_WAIT, al
+    out PC98_IO_WAIT, al
+%endmacro
 
 ; These labels are the stable entry points used by PC-98 Wolfenstein 3D.
 ; The patcher replaces each old entry with a near jump to the matching label.
@@ -599,9 +603,9 @@ restore_codec:
     ret
 
 ; Wolfenstein 3D produces a complete OPL2 register stream for its IMF music
-; and AdLib sound effects. The Cu10 exposes its YMF701 OPL3 bank 0 at
-; 1488h/1489h, so reuse the OPL2 register layout instead of translating the
-; instruments into the separate OPN-compatible FM mode.
+; and AdLib sound effects. The Cu10 exposes the YMF701 OPL3 synthesizer at
+; 1488h-148Bh. This handoff is transcribed from NEC/Yamaha's YMF701 Windows 95
+; driver for PC-9821 ValueStar machines, not from the later PC-9801-118 path.
 
 opl_detect_init:
     push ebx
@@ -610,77 +614,105 @@ opl_detect_init:
     pushfd
     cli
 
-    ; CanBe Sound 2 and PC-9801-118 hardware must switch Sound ID to x3h before
-    ; the extended OPL interface responds. Cu10 reports 81h, so this writes 83h.
+    ; Sound ID bit 1 reports whether the YMF701 OPL3 compatibility interface is
+    ; already selected. A stock Cu10 reports 81h; NEC's driver selects 82h.
     mov dx, SOUND_ID_PORT
     in al, dx
-    and al, 0xf0
-    cmp al, 0x70
-    je .sound_family
-    cmp al, 0x80
-    jne .missing
-.sound_family:
-    mov bl, al
-    mov dx, OPL_CONTROL_ADDRESS
-    xor al, al
-    out dx, al
-    mov dx, OPL_CONTROL_DATA
-    in al, dx
-    test al, 0x08
+    test al, 0x02
     jnz .probe
 
-    mov dx, SOUND_ID_PORT
-    mov al, bl
-    or al, 0x03
+    mov al, 0x82
     out dx, al
+    IO_WAIT_3
 
-    mov dx, PC98_IO_WAIT
-    out dx, al
+    ; Preserve all route bits except the two which block this OPL3 handoff.
     mov dx, CANBE_ROUTE_INDEX
     mov al, 0x01
     out dx, al
-    mov dx, PC98_IO_WAIT
+    inc dx
+    in al, dx
+    test al, 0x88
+    jz .route_ready
+    and al, 0x77
     out dx, al
-    mov dx, CANBE_ROUTE_DATA
-    mov al, 0x80
-    out dx, al
+.route_ready:
 
-    mov dx, PC98_IO_WAIT
-    out dx, al
+    ; Unlock the secondary OPL bank and select the YMF701 OPL3 path.
     mov dx, OPL_MODE_ADDRESS
     mov al, 0x05
     out dx, al
-    mov dx, PC98_IO_WAIT
-    out dx, al
+    IO_WAIT_3
     mov dx, OPL_MODE_DATA
     mov al, 0x05
     out dx, al
+    IO_WAIT_3
 
-    mov dx, PC98_IO_WAIT
-    out dx, al
     mov dx, OPL_MODE_ADDRESS
     mov al, 0x08
     out dx, al
-    mov dx, PC98_IO_WAIT
-    out dx, al
+    IO_WAIT_3
     mov dx, OPL_MODE_DATA
     mov al, 0x04
     out dx, al
+    IO_WAIT_3
 
-    mov ecx, 2000
-    mov dx, PC98_IO_WAIT
+    mov ecx, 40
 .route_delay:
-    out dx, al
+    IO_WAIT_3
     loop .route_delay
 
+    ; Finish the exact NEC/Yamaha sequence: release the gate, reset the
+    ; compatibility register, enable OPL3 NEW mode, disable 4-operator pairs,
+    ; mask both timers, and clear the composite-sine/CSM register.
     mov dx, OPL_MODE_DATA
     xor al, al
     out dx, al
+    IO_WAIT_3
+
     mov dx, OPL_ADDRESS
     mov al, 0xf7
     out dx, al
+    IO_WAIT_3
     mov dx, OPL_DATA
+    xor al, al
     out dx, al
+    IO_WAIT_3
+
+    mov dx, OPL_MODE_ADDRESS
+    mov al, 0x05
+    out dx, al
+    IO_WAIT_3
+    mov dx, OPL_MODE_DATA
+    mov al, 0x01
+    out dx, al
+    IO_WAIT_3
+
+    mov dx, OPL_ADDRESS
+    mov al, 0x04
+    out dx, al
+    IO_WAIT_3
+    mov dx, OPL_DATA
+    mov al, 0x60
+    out dx, al
+    IO_WAIT_3
+
+    mov dx, OPL_MODE_ADDRESS
+    mov al, 0x04
+    out dx, al
+    IO_WAIT_3
+    mov dx, OPL_MODE_DATA
+    xor al, al
+    out dx, al
+    IO_WAIT_3
+
+    mov dx, OPL_ADDRESS
+    mov al, 0x08
+    out dx, al
+    IO_WAIT_3
+    mov dx, OPL_DATA
+    xor al, al
+    out dx, al
+    IO_WAIT_3
 
 .probe:
     ; Standard OPL timer test. A working chip changes status from 00h to C0h.
@@ -751,7 +783,7 @@ opl_adlib_write:
     je .done
     mov al, [ebp + 8]
     mov ah, [ebp + 12]
-    ; The CanBe/YMF701 handoff leaves the synth in OPL3 mode. The game supplies
+    ; The YMF701 handoff leaves the synth in OPL3 mode. The game supplies
     ; OPL2 C0h-C8h values, whose upper nibble is always zero. On OPL3 that
     ; clears the left/right output enables and can mute whole channels.
     ; Route all nine OPL2 channel slots to both stereo outputs while
@@ -768,8 +800,9 @@ opl_adlib_write:
     pop ebp
     ret
 
-; AL = OPL register, AH = value. The address and data delays match Yamaha's
-; OPL timing through PC-98 I/O reads, following the CanBe/118 reference code.
+; AL = OPL register, AH = value. Keep the PC-98 release's original six address
+; reads and 42 data-delay reads. Shortening the latter can drop IMF writes and
+; is audible as missing notes or instruments.
 opl_write:
     push ebx
     push ecx
@@ -788,7 +821,7 @@ opl_write:
     mov al, bh
     out dx, al
     mov dx, OPL_ADDRESS
-    mov ecx, 35
+    mov ecx, 42
 .data_delay:
     in al, dx
     loop .data_delay
