@@ -69,10 +69,10 @@ The script creates:
 
 ```text
 out/WOLF98.EXE
-out/CU10-GOG.FDI
+out/CU10-PAN.FDI
 ```
 
-Copy `CU10-GOG.FDI` to a Gotek USB drive and select it with FastFloppy.
+Copy `CU10-PAN.FDI` to a Gotek USB drive and select it with FastFloppy.
 
 ## Install on the PC-9821
 
@@ -122,10 +122,12 @@ adjusts the P3 size fields without moving the original stack.
 
 DMA completion is polled through Wolf98's existing timer handlers. Codec
 interrupt generation stays disabled. The FM patch selects the Cu10's extended
-FM mode and forwards each OPL2 register/value pair to `1488h/1489h`. All nine
-Wolf voices retain their original frequencies, envelopes, operators, and
-waveforms. See [technical notes](docs/technical-notes.md) for the hardware and
-extender details.
+FM mode and forwards each OPL2 register/value pair to `1488h/1489h`. Because
+that hardware remains in OPL3 mode, the patch adds both stereo-output bits to
+Wolf's `C0h` through `C8h` channel-control writes. All nine Wolf voices retain
+their original frequencies, envelopes, operators, and waveforms. See
+[technical notes](docs/technical-notes.md) for the hardware and extender
+details.
 
 ## Scope
 

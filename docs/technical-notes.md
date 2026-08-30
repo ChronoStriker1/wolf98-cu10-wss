@@ -54,16 +54,21 @@ low-level writer sends those register/value pairs to Sound Blaster-compatible
 ports `28D2h` and `29D2h`, which do not control the Cu10's onboard FM block.
 
 The replacement AdLib detector follows the CanBe Sound 2 and PC-9801-118
-extended-FM initialization sequence. It changes Sound ID `81h` to `83h`, sets
-the routing controls at `0F4Ah/0F4Bh` and `148Ah/148Bh`, and performs the
-standard OPL timer test through `1488h/1489h`. This sequence comes from the
-[Laboratory for PC-9821 reference implementation](https://darudarudan.github.io/pc9821/pc9821.html).
+extended-FM initialization sequence. It requests Sound ID `83h`, sets the
+routing controls at `0F4Ah/0F4Bh` and `148Ah/148Bh`, and performs the standard
+OPL timer test through `1488h/1489h`. The target Cu10 later reports `80h` to
+SIC, so the diagnostic value is not used as proof that the mode stayed active.
+The audible output and OPL timer response are the useful checks. This sequence
+comes from the [Laboratory for PC-9821 reference implementation](https://darudarudan.github.io/pc9821/pc9821.html).
 
-The replacement writer passes every OPL2 register and value to `1488h/1489h`
-without translation. Wolf therefore keeps all nine melodic channels and its
-original frequency, envelope, multiplier, feedback, connection, level, and
-waveform values. Address and data writes use the delays required by the Yamaha
-OPL interface.
+The handoff enables OPL3 mode. Wolf's OPL2 data writes only the feedback and
+connection bits in channel registers `C0h` through `C8h`; its upper nibble is
+zero. On OPL3 hardware that also clears the left and right output enables,
+which can mute complete melodic channels. The writer adds bits 4 and 5 to those
+nine writes so every Wolf channel reaches both stereo outputs. It passes all
+other values unchanged, preserving the original frequency, envelope,
+multiplier, feedback, connection, level, and waveform values. Address and data
+writes use the delays required by the Yamaha OPL interface.
 
 ## Registered audio replacement
 

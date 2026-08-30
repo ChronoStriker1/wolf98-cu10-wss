@@ -2,7 +2,8 @@ Wolf98 PC-9821 Cu10 WSS and native OPL sound patch
 
 This disk is only for the Wolf98 version installed by the CU10 disks.
 It uses WSS for digitized effects. Wolf's original OPL music and
-AdLib-style sound effects go to the Cu10 extended FM interface.
+AdLib-style sound effects go to the Cu10 extended FM interface. Wolf's
+nine OPL2 channels are enabled on both OPL3 stereo outputs.
 It also replaces AUDIOHED.WL6 and AUDIOT.WL6 with the matching
 registered files extracted from the owner's GOG release.
 

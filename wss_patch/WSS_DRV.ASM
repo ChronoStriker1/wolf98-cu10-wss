@@ -751,6 +751,17 @@ opl_adlib_write:
     je .done
     mov al, [ebp + 8]
     mov ah, [ebp + 12]
+    ; The CanBe/YMF701 handoff leaves the synth in OPL3 mode. Wolf supplies
+    ; OPL2 C0h-C8h values, whose upper nibble is always zero. On OPL3 that
+    ; clears the left/right output enables and can mute whole channels.
+    ; Route every one of Wolf's nine channels to both stereo outputs while
+    ; preserving its feedback and connection bits.
+    cmp al, 0xc0
+    jb .write
+    cmp al, 0xc8
+    ja .write
+    or ah, 0x30
+.write:
     call opl_write
 .done:
     popfd
