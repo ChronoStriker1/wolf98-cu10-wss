@@ -53,6 +53,10 @@ and right AUX2. Yamaha's YMF701 Linux driver maps AD1848 LINE2/AUX2 to the
 internal synth. The target Cu10 reported both registers as `88h`, with the mute
 bit set. The driver clears that bit and preserves the existing attenuation.
 
+PCM playback and FM output share this codec mixer but remain separate game
+devices. The FM initializer owns the AUX2 unmute, so shutting down PC9821 PCM
+does not restore the old AUX2 mute bits and silence music.
+
 ## Programming references
 
 - [NEC PC-9821Cu10 product specification](https://support.nec-lavie.jp/support/product/data/spec/cpu/96060001-1.html)

@@ -6,8 +6,9 @@ PC-9821 Cu10. It restores digitized effects such as doors, gunshots, and guard
 voices through the WSS codec. It sends Wolfenstein 3D's original OPL2 music
 and AdLib sound effects through the Cu10 extended-FM interface.
 
-The WSS portion was verified on a real PC-9821 Cu10 with these detected
-resources:
+The patch was verified on a real PC-9821 Cu10. FM music plays correctly in the
+intro and levels, and WSS plays the sampled doors, gunshots, and guard voices.
+The detected resources are:
 
 - WSS base address `0F40h`
 - Codec ID `05h`
@@ -37,8 +38,8 @@ The tested PC-9821 Cu10 has a YMF288 at `0188h` for standard FM, SSG, and
 rhythm, plus a Yamaha YMF701-class WSS and OPL3 audio controller. SIC 2.03
 reported the YMF288 directly on the real machine. OPL3 has 18 two-operator
 melodic channels, or 15 melodic channels plus five percussion voices in rhythm
-mode. That second
-arrangement is the source of the Cu10's advertised 20-voice FM specification.
+mode. That second arrangement is the source of the Cu10's advertised 20-voice
+FM specification.
 
 This patch does not rewrite the music for OPL3's second register bank or
 four-operator instruments. It uses OPL3 bank 0 in its OPL2-compatible layout.
@@ -125,6 +126,22 @@ image passes its archive check. This applies to `CU10-DRV.FDI` and
 After starting Wolfenstein 3D, open its in-game Sound menu. Select Sound Blaster
 under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected for DIGITIZED SOUND.
 
+These choices use different hardware paths:
+
+- `SOUND EFFECTS: Sound Blaster` selects the OPL-compatible FM effect driver.
+- `MUSIC: Sound Blaster` selects the OPL-compatible FM music driver.
+- `DIGITIZED SOUND: PC9821 PCM Sound` selects the patched Cu10 WSS driver.
+
+Do not select Sound Blaster under DIGITIZED SOUND. That option selects the
+game's original Sound Blaster PCM driver, not FM playback, and does not use the
+Cu10 WSS patch.
+
+Wolf98 has one digitized voice. When a new sampled effect passes the game's
+priority check, it can stop the current sampled effect. The patch keeps this
+original behavior. Turning digitized sound off uses the game's short FM
+substitutes for doors, shots, and voices; it does not provide the sampled
+effects. FM music remains audible when digitized sound is turned off.
+
 ## Run the standalone hardware test
 
 The standalone test contains no game code and does not require `WOLF98.EXE`:
@@ -139,7 +156,15 @@ Select `out/CU10-TST.FDI` in FastFloppy and run:
 C:\TEST
 ```
 
-A clean tone confirms the WSS codec and PC-98 DMA path.
+`TEST` runs `YMF_TST.COM`, the targeted extended-FM and AUX2 output test. It
+writes its register readings and the operator's audible result to
+`YMFRESUL.TXT` on the floppy image.
+
+The same image contains three other tools:
+
+- `WSS_TST` plays a generated sample through WSS and PC-98 DMA channel 1.
+- `INFO_TST` writes `CU10INFO.TXT` with detected sound resources and registers.
+- `FM_TST` runs the broader OPN and extended-FM comparison tests.
 
 ## How it works
 

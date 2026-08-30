@@ -26,9 +26,9 @@ Format:             unsigned 8-bit mono at 8000 Hz
 DMA:                PC-98 channel 1
 ```
 
-Configuration `22h` matches the routing used by the standalone tone test on the
-target Cu10. Codec register 10 has interrupt generation disabled, so the driver
-does not install an IRQ12 handler.
+Configuration `22h` matches the routing used by `WSS_TST.COM` on the target
+Cu10. Codec register 10 has interrupt generation disabled, so the driver does
+not install an IRQ12 handler.
 
 ## DMA and protected mode
 
@@ -52,6 +52,11 @@ segment. Mixing only the current DMA segment was tested and removed because it
 introduced restart pops and discarded the later segments of interrupted guard
 voices. Proper overlap would need to manage complete sounds above Wolf98's
 segment loader.
+
+The Sound Blaster choice under DIGITIZED SOUND is a separate PCM driver. It
+does not select OPL FM and does not enter the replacement WSS routines. The
+working Cu10 configuration uses Sound Blaster for SOUND EFFECTS and MUSIC, then
+PC9821 PCM Sound for DIGITIZED SOUND.
 
 ## Volume and panning
 

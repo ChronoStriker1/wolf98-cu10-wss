@@ -18,3 +18,9 @@ read, PATCH checks only that the installed executable exists.
 After starting Wolfenstein 3D, open the in-game Sound menu. Select Sound
 Blaster under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected under
 DIGITIZED SOUND.
+
+Do not select Sound Blaster under DIGITIZED SOUND. That is a separate PCM
+driver, not the FM setting, and it does not use this WSS patch.
+
+Wolf98 plays one digitized effect at a time. A new sampled effect may stop the
+current one according to the game's original sound-priority rules.
