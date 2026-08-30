@@ -14,9 +14,11 @@ resources:
 - IRQ12 and DMA channel 1 resource routing
 - Sound ID `81h`
 
-The FM path targets the Cu10's YMF701 OPL3-SA1 compatibility interface at
-`1488h` through `148Bh`. Its initialization is transcribed from NEC/Yamaha's
-YMF701 Windows 95 driver for PC-9821 ValueStar systems.
+The FM path writes Wolfenstein 3D's OPL2 stream through the Cu10 compatibility
+ports at `1488h/1489h`. The full Windows YMF701 handoff is not transplanted:
+without the surrounding controller and mixer setup it silenced both WSS and FM
+on the test machine. The current DOS fallback restores the last audible routing
+while further YMF701 work is isolated in hardware tests.
 
 This repository contains no Wolfenstein 3D executable, game data, or patched
 floppy image. The build checks for one exact `WOLF98.EXE` and creates the
@@ -142,13 +144,11 @@ eight original PCM entry points, the AdLib detector, and the AdLib register
 writer. It also adjusts the P3 size fields without moving the original stack.
 
 DMA completion is polled through Wolfenstein 3D's existing timer handlers. Codec
-interrupt generation stays disabled. The FM patch performs the YMF701-specific
-PC-98 handoff, enables OPL3 NEW mode through the second bank, and forwards each
-OPL2 register/value pair to `1488h/1489h`. It preserves the game's original
-six address-delay reads and 42 data-delay reads so writes are not dropped. The
-patch also adds both stereo-output bits to Wolfenstein 3D's `C0h` through `C8h`
-channel-control writes. All nine game voices retain their original frequencies,
-envelopes, operators, and waveforms.
+interrupt generation stays disabled. The FM fallback forwards each OPL2
+register/value pair to `1488h/1489h`, preserves the game's original six
+address-delay reads and 42 data-delay reads, and adds both stereo-output bits to
+Wolfenstein 3D's `C0h` through `C8h` channel-control writes. All nine game
+voices retain their original frequencies, envelopes, operators, and waveforms.
 See [technical notes](docs/technical-notes.md) for the hardware and extender
 details.
 

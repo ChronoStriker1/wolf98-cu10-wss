@@ -14,19 +14,14 @@ def main() -> None:
     driver = args.driver.read_bytes()
 
     required = {
-        "Sound ID status check": bytes.fromhex("66 ba 60 a4 ec a8 02"),
-        "Sound ID 82h selection": bytes.fromhex(
-            "b0 82 ee e6 5f e6 5f e6 5f 66 ba 4a 0f"
+        "Sound ID family check": bytes.fromhex(
+            "66 ba 60 a4 ec 24 f0 3c 70 74 08 3c 80"
         ),
-        "route-preserving 0F4Ah/0F4Bh update": bytes.fromhex(
-            "66 ba 4a 0f b0 01 ee 66 42 ec a8 88 74 03 24 77 ee"
+        "audible compatibility control ports": bytes.fromhex(
+            "66 ba 8e 14 30 c0 ee 66 ba 8f 14 ec a8 08"
         ),
-        "OPL3 NEW-mode bank write": bytes.fromhex(
-            "66 ba 8a 14 b0 05 ee e6 5f e6 5f e6 5f 66 ba 8b 14 b0 01 ee"
-        ),
-        "F7h compatibility register cleared": bytes.fromhex(
-            "66 ba 88 14 b0 f7 ee e6 5f e6 5f e6 5f 66 ba 89 14 30 c0 ee"
-        ),
+        "compatibility route delay": bytes.fromhex("b9 d0 07 00 00"),
+        "OPL3 stereo routing": bytes.fromhex("3c c0 72 07 3c c8 77 03 80 cc 30"),
         "42-read runtime data delay": bytes.fromhex("b9 2a 00 00 00"),
     }
     for description, pattern in required.items():
@@ -35,9 +30,10 @@ def main() -> None:
             raise SystemExit(f"{description}: expected once, found {count}")
 
     forbidden = {
-        "obsolete 148Eh control port": bytes.fromhex("66 ba 8e 14"),
-        "obsolete 148Fh control port": bytes.fromhex("66 ba 8f 14"),
-        "obsolete 2000-iteration route delay": bytes.fromhex("b9 d0 07 00 00"),
+        "regressing Sound ID 82h handoff": bytes.fromhex(
+            "b0 82 ee e6 5f e6 5f e6 5f"
+        ),
+        "shortened 35-read delay": bytes.fromhex("b9 23 00 00 00"),
     }
     for description, pattern in forbidden.items():
         if pattern in driver:
