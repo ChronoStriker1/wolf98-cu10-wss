@@ -99,6 +99,11 @@ audio archive or other game data. This isolates hardware-driver testing from
 data-file changes. The installer removes only `.NEW` remnants from the earlier
 failed staging attempt and does not keep an executable backup.
 
+NEC DOS internal commands do not provide a dependable success `ERRORLEVEL` for
+this installer. A real-mode verifier therefore rereads both copies in 512-byte
+blocks, compares every byte, and returns an explicit status. The build replaces
+the canonical `CU10-DRV.FDI` atomically after the new image passes validation.
+
 ## P3 modifications
 
 The patcher accepts only the known SHA-256 hash. It changes:

@@ -107,7 +107,13 @@ WOLF98
 ```
 
 `PATCH.BAT` replaces only `WOLF98.EXE`. It does not change the installed audio,
-graphics, maps, or `VSWAP` data and does not retain an executable backup.
+graphics, maps, or `VSWAP` data and does not retain an executable backup. A
+small DOS verifier compares the source and installed executable byte for byte;
+the installer does not rely on the inherited `ERRORLEVEL` from DOS `COPY`.
+
+Rebuilding safely overwrites the same `out/CU10-DRV.FDI` only after the new
+image passes its archive check. Successive builds do not create revision-named
+disk images.
 
 After starting Wolfenstein 3D, open its in-game Sound menu. Select Sound Blaster
 under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected for DIGITIZED SOUND.

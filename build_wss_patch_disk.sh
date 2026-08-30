@@ -9,6 +9,7 @@ driver_bin="$output_dir/WSS_DRV.BIN"
 driver_listing="$output_dir/WSS_DRV.LST"
 output_exe="$output_dir/WOLF98.EXE"
 output_image="$output_dir/CU10-DRV.FDI"
+verify_com="$output_dir/VERIFY.COM"
 
 for command_name in nasm python3 unix2dos 7zz hdiutil newfs_msdos mount_msdos; do
   if ! command -v "$command_name" >/dev/null; then
@@ -23,16 +24,14 @@ if [[ ! -f "$original_exe" ]]; then
 fi
 
 mkdir -p "$output_dir"
-if [[ -e "$output_image" ]]; then
-  print -u2 "Refusing to overwrite: $output_image"
-  exit 1
-fi
 
 nasm -f bin -l "$driver_listing" -o "$driver_bin" "$patch_dir/WSS_DRV.ASM"
+nasm -f bin -o "$verify_com" "$patch_dir/VERIFY.ASM"
 python3 "$project_dir/tools/verify_fm_driver.py" "$driver_bin"
 python3 "$patch_dir/patch_wolf98.py" \
   "$original_exe" "$driver_bin" "$driver_listing" "$output_exe"
 
+staged_image=$(mktemp "$output_dir/.CU10-DRV.XXXXXX")
 raw_image=$(mktemp -t cu10-wss-patch-raw).img
 mount_dir=$(mktemp -d -t cu10-wss-patch-mnt)
 device_node=
@@ -45,19 +44,20 @@ cleanup() {
   fi
   [[ -e "$raw_image" ]] && unlink "$raw_image"
   [[ -d "$mount_dir" ]] && rmdir "$mount_dir" 2>/dev/null || true
-  if [[ "$complete" -eq 0 && -e "$output_image" ]]; then
-    unlink "$output_image"
+  if [[ "$complete" -eq 0 && -e "$staged_image" ]]; then
+    unlink "$staged_image"
   fi
 }
 trap cleanup EXIT
 
-python3 "$project_dir/tools/make_blank_fdi.py" "$output_image" >/dev/null
-dd if="$output_image" of="$raw_image" bs=4096 skip=1 status=none
+python3 "$project_dir/tools/make_blank_fdi.py" "$staged_image" >/dev/null
+dd if="$staged_image" of="$raw_image" bs=4096 skip=1 status=none
 attach_output=$(hdiutil attach -nomount "$raw_image")
 device_node=$(print -r -- "$attach_output" | awk 'NR == 1 {print $1}')
 newfs_msdos -F 12 -S 1024 -c 1 -e 192 -m 0xfe -a 2 -u 8 -h 2 -s 1232 "$device_node" >/dev/null
 mount_msdos "$device_node" "$mount_dir"
 COPYFILE_DISABLE=1 cp "$output_exe" "$mount_dir/WOLF98.EXE"
+COPYFILE_DISABLE=1 cp "$verify_com" "$mount_dir/VERIFY.COM"
 unix2dos -q -n "$patch_dir/PATCH.BAT" "$mount_dir/PATCH.BAT"
 unix2dos -q -n "$patch_dir/README.TXT" "$mount_dir/README.TXT"
 sync
@@ -69,7 +69,8 @@ umount "$mount_dir"
 hdiutil detach "$device_node" >/dev/null
 device_node=
 
-dd if="$raw_image" of="$output_image" bs=4096 seek=1 conv=notrunc status=none
-7zz t "$output_image" >/dev/null
+dd if="$raw_image" of="$staged_image" bs=4096 seek=1 conv=notrunc status=none
+7zz t "$staged_image" >/dev/null
+mv -f "$staged_image" "$output_image"
 complete=1
 shasum -a 256 "$output_exe" "$output_image"
