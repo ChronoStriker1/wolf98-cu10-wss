@@ -11,10 +11,8 @@ Install:
   C:\PATCH
 
 PATCH removes any AUDIOHED.NEW or AUDIOT.NEW files left by an earlier failed
-staging attempt. No backup files are retained.
-
-VERIFY.COM compares the copied executable with the patch-disk copy byte for
-byte. PATCH does not trust a stale ERRORLEVEL left by the DOS COPY command.
+staging attempt. No backup files are retained. To avoid another long floppy
+read, PATCH checks only that the installed executable exists.
 
 After starting Wolfenstein 3D, open the in-game Sound menu. Select Sound
 Blaster under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected under

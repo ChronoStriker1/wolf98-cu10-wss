@@ -97,9 +97,10 @@ data-file changes. The installer removes only `.NEW` remnants from the earlier
 failed staging attempt and does not keep an executable backup.
 
 NEC DOS internal commands do not provide a dependable success `ERRORLEVEL` for
-this installer. A real-mode verifier therefore rereads both copies in 512-byte
-blocks, compares every byte, and returns an explicit status. The build replaces
-the canonical `CU10-DRV.FDI` atomically after the new image passes validation.
+this installer. The installer therefore checks only that the destination file
+exists. It deliberately avoids rereading large files through the slow PC-98
+floppy path. The build still replaces the canonical `CU10-DRV.FDI` atomically
+after validating the image on the Mac.
 
 ## P3 modifications
 

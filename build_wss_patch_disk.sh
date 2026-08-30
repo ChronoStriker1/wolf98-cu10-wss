@@ -9,7 +9,6 @@ driver_bin="$output_dir/WSS_DRV.BIN"
 driver_listing="$output_dir/WSS_DRV.LST"
 output_exe="$output_dir/WOLF98.EXE"
 output_image="$output_dir/CU10-DRV.FDI"
-verify_com="$output_dir/VERIFY.COM"
 
 for command_name in nasm python3 unix2dos 7zz hdiutil newfs_msdos mount_msdos; do
   if ! command -v "$command_name" >/dev/null; then
@@ -26,7 +25,6 @@ fi
 mkdir -p "$output_dir"
 
 nasm -f bin -l "$driver_listing" -o "$driver_bin" "$patch_dir/WSS_DRV.ASM"
-nasm -f bin -o "$verify_com" "$patch_dir/VERIFY.ASM"
 python3 "$project_dir/tools/verify_fm_driver.py" "$driver_bin"
 python3 "$patch_dir/patch_wolf98.py" \
   "$original_exe" "$driver_bin" "$driver_listing" "$output_exe"
@@ -57,7 +55,6 @@ device_node=$(print -r -- "$attach_output" | awk 'NR == 1 {print $1}')
 newfs_msdos -F 12 -S 1024 -c 1 -e 192 -m 0xfe -a 2 -u 8 -h 2 -s 1232 "$device_node" >/dev/null
 mount_msdos "$device_node" "$mount_dir"
 COPYFILE_DISABLE=1 cp "$output_exe" "$mount_dir/WOLF98.EXE"
-COPYFILE_DISABLE=1 cp "$verify_com" "$mount_dir/VERIFY.COM"
 unix2dos -q -n "$patch_dir/PATCH.BAT" "$mount_dir/PATCH.BAT"
 unix2dos -q -n "$patch_dir/README.TXT" "$mount_dir/README.TXT"
 sync
