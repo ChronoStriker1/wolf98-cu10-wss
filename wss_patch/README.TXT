@@ -1,8 +1,9 @@
 Wolfenstein 3D PC-9821 Cu10 WSS and FM sound patch
 
 This disk patches the PC-98 Wolfenstein 3D executable WOLF98.EXE.
-It uses WSS for digitized effects. The game's original OPL2 music and
-AdLib sound effects use the OPL3 synthesizer in the Cu10 YMF701 OPL3-SA1.
+It uses the Cu10 WSS codec for digitized effects. The game's original
+OPL2 music and AdLib sound effects use the extended-FM interface. The
+driver unmutes both CanBe FM mixer channels and WSS AUX2.
 The patch uses OPL3 bank 0 in its OPL2-compatible layout. It does not
 convert the music to OPL3 bank 1 or four-operator instruments.
 It replaces only WOLF98.EXE. Audio and game data files are not changed.

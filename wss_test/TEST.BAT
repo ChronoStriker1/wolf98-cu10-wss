@@ -1,7 +1,7 @@
 @ECHO OFF
 ECHO.
-ECHO PC-9821 Cu10 WSS hardware test
+ECHO PC-9821 Cu10 OPL AUX2 output test
 ECHO.
-WSS_TST.COM
+YMF_TST.COM
 ECHO.
-ECHO Report whether you heard a clean tone and any ERROR message shown.
+ECHO Return the USB drive to the Mac after YMFRESUL.TXT is saved.

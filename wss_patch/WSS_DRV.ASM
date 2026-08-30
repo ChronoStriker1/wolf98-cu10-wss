@@ -26,12 +26,12 @@ org 0x7c000
 %define PC98_IO_WAIT        0x005f
 %define CANBE_ROUTE_INDEX   0x0f4a
 %define CANBE_ROUTE_DATA    0x0f4b
+%define CANBE_FM_LEFT       0x30
+%define CANBE_FM_RIGHT      0x31
+%define YMF_BOARD_INDEX     0x548e
+%define YMF_BOARD_DATA      0x548f
 %define OPL_ADDRESS         0x1488
 %define OPL_DATA            0x1489
-%define OPL_MODE_ADDRESS    0x148a
-%define OPL_MODE_DATA       0x148b
-%define OPL_CONTROL_ADDRESS 0x148e
-%define OPL_CONTROL_DATA    0x148f
 
 ; These labels are the stable entry points used by PC-98 Wolfenstein 3D.
 ; The patcher replaces each old entry with a near jump to the matching label.
@@ -500,6 +500,12 @@ codec_write:
     ret
 
 save_codec:
+    mov al, 2
+    call codec_read
+    mov [saved_reg2], al
+    mov al, 3
+    call codec_read
+    mov [saved_reg3], al
     mov al, 6
     call codec_read
     mov [saved_reg6], al
@@ -545,6 +551,7 @@ configure_codec:
     mov ah, al
     mov al, 10
     call codec_write
+
     xor ah, ah
     mov al, 6
     call codec_write
@@ -584,6 +591,12 @@ restore_codec:
     out dx, al
     call wait_calibration
 
+    mov ah, [saved_reg2]
+    mov al, 2
+    call codec_write
+    mov ah, [saved_reg3]
+    mov al, 3
+    call codec_write
     mov ah, [saved_reg6]
     mov al, 6
     call codec_write
@@ -599,10 +612,8 @@ restore_codec:
     ret
 
 ; Wolfenstein 3D produces a complete OPL2 register stream for its IMF music
-; and AdLib sound effects. This compatibility handoff is the last version that
-; produced both WSS effects and partial FM on the test Cu10. Transplanting the
-; YMF701 Windows-driver handoff without its controller and mixer setup silenced
-; both paths, so that unverified sequence is deliberately not used here.
+; and AdLib sound effects. The Cu10 test showed that its OPL timer responds at
+; 1488h only with Sound ID 82h and Yamaha board register 20h set to 00h.
 
 opl_detect_init:
     push ebx
@@ -611,113 +622,78 @@ opl_detect_init:
     pushfd
     cli
 
-    ; CanBe Sound 2 and PC-9801-118 hardware must switch Sound ID to x3h before
-    ; the extended OPL interface responds. Cu10 reports 81h, so this writes 83h.
+    ; This driver intentionally targets the Cu10's 80h sound family.
     mov dx, SOUND_ID_PORT
     in al, dx
     and al, 0xf0
-    cmp al, 0x70
-    je .sound_family
     cmp al, 0x80
     jne .missing
-.sound_family:
-    mov bl, al
-    mov dx, OPL_CONTROL_ADDRESS
+
+    mov dx, YMF_BOARD_INDEX
+    mov al, 0x20
+    out dx, al
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, YMF_BOARD_DATA
     xor al, al
     out dx, al
-    mov dx, OPL_CONTROL_DATA
-    in al, dx
-    test al, 0x08
-    jnz .probe
 
     mov dx, SOUND_ID_PORT
-    mov al, bl
-    or al, 0x03
+    mov al, 0x82
+    out dx, al
+    mov dx, PC98_IO_WAIT
+    out dx, al
+
+    ; The original sample code wrote 80h to undocumented mixer index 01h.
+    ; Cu10 mixer documentation identifies 30h and 31h as FM left and right.
+    ; Clear only bit 7 so the existing five-bit volume setting is retained.
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, CANBE_ROUTE_INDEX
+    mov al, CANBE_FM_LEFT
+    out dx, al
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, CANBE_ROUTE_DATA
+    in al, dx
+    and al, 0x7f
     out dx, al
 
     mov dx, PC98_IO_WAIT
     out dx, al
     mov dx, CANBE_ROUTE_INDEX
-    mov al, 0x01
+    mov al, CANBE_FM_RIGHT
     out dx, al
     mov dx, PC98_IO_WAIT
     out dx, al
     mov dx, CANBE_ROUTE_DATA
-    mov al, 0x80
-    out dx, al
-
-    mov dx, PC98_IO_WAIT
-    out dx, al
-    mov dx, OPL_MODE_ADDRESS
-    mov al, 0x05
-    out dx, al
-    mov dx, PC98_IO_WAIT
-    out dx, al
-    mov dx, OPL_MODE_DATA
-    mov al, 0x05
-    out dx, al
-
-    mov dx, PC98_IO_WAIT
-    out dx, al
-    mov dx, OPL_MODE_ADDRESS
-    mov al, 0x08
-    out dx, al
-    mov dx, PC98_IO_WAIT
-    out dx, al
-    mov dx, OPL_MODE_DATA
-    mov al, 0x04
-    out dx, al
-
-    mov ecx, 2000
-    mov dx, PC98_IO_WAIT
-.route_delay:
-    out dx, al
-    loop .route_delay
-
-    mov dx, OPL_MODE_DATA
-    xor al, al
-    out dx, al
-    mov dx, OPL_ADDRESS
-    mov al, 0xf7
-    out dx, al
-    mov dx, OPL_DATA
-    out dx, al
-
-.probe:
-    ; Standard OPL timer test. A working chip changes status from 00h to C0h.
-    mov ax, 0x6004
-    call opl_write
-    mov ax, 0x8004
-    call opl_write
-    mov dx, OPL_ADDRESS
     in al, dx
-    mov bl, al
+    and al, 0x7f
+    out dx, al
 
-    mov ax, 0xff02
-    call opl_write
-    mov ax, 0x2104
-    call opl_write
-    mov ecx, 125
-    mov dx, OPL_ADDRESS
-.timer_delay:
-    in al, dx
-    loop .timer_delay
-    in al, dx
-    mov bh, al
+    ; The internal OPL3 synth reaches the codec through AUX2. FM owns this
+    ; route, not the PCM driver. Leaving it out of save_codec/restore_codec
+    ; prevents disabling PC-9821 PCM from muting music that remains active.
+    call wait_codec_ready
+    jc .missing
+    mov al, 4
+    call codec_read
+    and al, 0x7f
+    mov ah, al
+    mov al, 4
+    call codec_write
+    mov al, 5
+    call codec_read
+    and al, 0x7f
+    mov ah, al
+    mov al, 5
+    call codec_write
 
-    mov ax, 0x6004
-    call opl_write
-    mov ax, 0x8004
-    call opl_write
-
-    and bl, 0xe0
-    jnz .missing
-    and bh, 0xe0
-    cmp bh, 0xc0
-    jne .missing
-
-    ; Start in OPL2-compatible mode with all channels silent. The game writes
-    ; its original instruments, frequencies, envelopes, and key states.
+    ; This executable targets the Cu10, whose extended-FM interface is known.
+    ; Do not disable all later music writes because its compatibility port did
+    ; not reproduce the discrete YM3812 timer signature expected by Wolf.
+    ; Start with all channels silent. The game then writes its instruments,
+    ; frequencies, envelopes, and key states.
     mov ebx, 1
 .clear_registers:
     mov eax, ebx
@@ -752,11 +728,9 @@ opl_adlib_write:
     je .done
     mov al, [ebp + 8]
     mov ah, [ebp + 12]
-    ; The CanBe/YMF701 handoff leaves the synth in OPL3 mode. The game supplies
-    ; OPL2 C0h-C8h values, whose upper nibble is always zero. On OPL3 that
-    ; clears the left/right output enables and can mute whole channels.
-    ; Route all nine OPL2 channel slots to both stereo outputs while
-    ; preserving its feedback and connection bits.
+    ; The game supplies OPL2 C0h-C8h values, whose upper nibble is zero. Set
+    ; both OPL3 output bits in case the Cu10 exposes the block in OPL3 mode.
+    ; OPL2 mode ignores those bits. Preserve feedback and connection.
     cmp al, 0xc0
     jb .write
     cmp al, 0xc8
@@ -807,6 +781,8 @@ block_bytes:         dd 0
 dma_physical:        dd 0
 dos_segment:         dd 0
 saved_wss_config:    db 0
+saved_reg2:          db 0
+saved_reg3:          db 0
 saved_reg6:          db 0
 saved_reg7:          db 0
 saved_reg8:          db 0

@@ -4,9 +4,15 @@
 
 The PC-98 Wolfenstein 3D executable, `WOLF98.EXE`, has a PC-9821 PCM path, but
 that driver accesses the PC-9801-86 register block at `A468h` through `A46Ch`.
-The PC-9821 Cu10 reports Sound ID `81h` and exposes a WSS-compatible codec at
-`0F40h`. Changing the sound ID alone cannot translate those register
+The target PC-9821 Cu10 reports Sound ID `80h` and exposes a WSS-compatible
+codec at `0F40h`. Changing the sound ID alone cannot translate those register
 interfaces.
+
+The Cu10's sound functions are split across a YMF288 at `0188h` for
+OPN-compatible FM and separate WSS/OPL3 hardware. SIC 2.03 identified the
+YMF288 directly on the target machine and reported WSS base `0F40h`, ID `05h`,
+and IRQ12. See [Cu10 audio hardware](cu10-audio-hardware.md) for the complete
+evidence.
 
 ## WSS setup
 
@@ -40,6 +46,13 @@ DMA terminal count is polled from wrappers around all three timer handlers that
 Wolfenstein 3D can select. Each wrapper preserves flags, general registers, and
 segment registers before calling the WSS poll routine.
 
+Wolf98 keeps one digitized voice and divides longer sounds into 4 KiB segments.
+An accepted new effect stops the active voice before starting its first
+segment. Mixing only the current DMA segment was tested and removed because it
+introduced restart pops and discarded the later segments of interrupted guard
+voices. Proper overlap would need to manage complete sounds above Wolf98's
+segment loader.
+
 ## Volume and panning
 
 Wolfenstein 3D's master-volume argument runs from `0` through `15`, where `15`
@@ -48,29 +61,41 @@ direction: `0` is loud and `15` is silent. Treating both APIs the same reduced
 normal centered effects by about 60 dB. The WSS driver has separate conversions
 for the two calling conventions.
 
-## OPL2 playback on the YMF701 OPL3 synthesizer
+FM has a separate two-stage output path. The CanBe mixer controls FM left and
+right at indices `30h` and `31h`. The YMF701 synth then reaches the codec
+through AUX2. WSS indirect registers `4` and `5` were `88h` on the target Cu10,
+so both channels were muted. The driver clears bit 7 at both stages while
+preserving their attenuation settings. This is why WSS effects could work while
+music remained silent.
+
+The FM initializer owns the AUX2 unmute. The PCM initializer does not save or
+restore registers `4` and `5`. Otherwise, changing `DIGITIZED SOUND` to `Off`
+would shut down PCM, restore the old AUX2 mute bits, and silence music that
+Wolf98 leaves running.
+
+## OPL2 playback through the extended-FM mode
 
 Wolfenstein 3D still contains its OPL2 register sequencer and IMF music data.
 Its low-level writer sends those register/value pairs to Sound
 Blaster-compatible ports `28D2h` and `29D2h`, which do not control the Cu10's
 onboard FM block.
 
-The NEC/Yamaha Windows driver contains a YMF701 OPL3 handoff, but that routine
-depends on controller and mixer state established elsewhere in the driver.
-Transplanting the handoff by itself selected Sound ID `82h` and silenced both
-WSS and FM on the test Cu10. That regression has been removed.
+The old build used a YMF297-derived handoff for CanBe Sound 2 and
+PC-9801-118-style hardware. The standalone test showed that route silent on the
+target Cu10. The OPL timer responds when Sound ID is `82h` and Yamaha board
+register `20h` is `00h`, so the current game driver uses those tested values.
 
-The current build restores the last DOS compatibility handoff that produced
-working WSS effects and partial FM. It still uses `1488h/1489h`, performs the
-standard OPL timer test, and is explicitly a fallback rather than a claim of a
-complete native YMF701 initialization. Further register work must pass a
-standalone hardware test before it is placed in the game executable.
+An earlier build rejected this interface unless its status port reproduced the
+discrete YM3812 timer signature. On the Cu10 that result disabled the AdLib
+writer completely, which removed both music and synthesized sound effects while
+WSS digitized effects continued to work. The Cu10-specific build no longer uses
+that generic detection result to suppress later FM writes.
 
 Wolfenstein 3D uses the YM3812 or OPL2 register format. OPL2 provides nine
 two-operator melodic channels, or six melodic channels plus five percussion
-voices in rhythm mode. The YMF701 OPL3-SA1 integrates an OPL3
-synthesizer with two register banks. OPL3 provides 18 two-operator melodic
-channels, or 15 melodic channels plus five percussion voices in rhythm mode.
+voices in rhythm mode. OPL3 has two register banks and provides 18
+two-operator melodic channels, or 15 melodic channels plus five percussion
+voices in rhythm mode.
 The latter is the Cu10's advertised 20-voice FM configuration. This patch uses
 only bank 0 and the original OPL2 channel layout.
 
@@ -117,13 +142,18 @@ not move the program's initial stack.
 
 ## Hardware references
 
-- [Yamaha YMF701 OPL3-SA1 product documentation](https://bitsavers.org/components/yamaha/YMF701_199510.pdf)
-  identifies the integrated YMF262-compatible OPL3 synthesizer, codec, and
-  mixer architecture.
-- [Linux's YMF701B OPL3-SA1 driver](https://github.com/torvalds/linux/blob/v2.6.16/sound/oss/opl3sa.c)
-  independently documents the password-protected controller and OPL3 synth
-  enable bit.
-- The [NEC/Yamaha PC-9821 ValueStar Windows 95 driver archive](https://lainnet.arcesia.net/repo/WIN95_V200.zip)
-  contains a PC-98-specific `A460h`, `0F4Ah/0F4Bh`, and `1488h` through
-  `148Bh` handoff. It is retained as a reference but is not transplanted without
-  the controller and mixer setup that surrounds it.
+- [NEC's Cu10 specification](https://support.nec-lavie.jp/support/product/data/spec/cpu/96060001-1.html)
+  lists WSS-class PCM, standard FM with SSG, and extended 20-voice FM.
+- [Yamaha YMF701 product documentation](https://bitsavers.org/components/yamaha/YMF701_199510.pdf)
+  identifies its OPL3, WSS codec, MIDI, joystick, and mixer functions. It does
+  not contain the Cu10's standard OPN/SSG function.
+- [PC-98 multimedia I/O and mixer notes](https://www2t.biglobe.ne.jp/~take52/tech/soft.htm)
+  document the CanBe FM mixer channels.
+- [SIC 2.03](https://www2t.biglobe.ne.jp/~take52/file/sic203.htm) identified the
+  target Cu10's YMF288, WSS resources, codec revision, and mixer levels.
+- [PC-98 OPL3 sample source](https://darudarudan.github.io/pc9821/pc9821.html)
+  provides the YMF297 CanBe/118 mode switch used for the negative comparison.
+- [Analog Devices AD1848 documentation](https://www.analog.com/media/en/technical-documentation/obsolete-data-sheets/1692269ad1848k.pdf)
+  documents WSS AUX2 registers `4` and `5` and their mute bit.
+- [Linux's YMF701B OPL3-SA driver](https://android.googlesource.com/kernel/msm/+/1da177e4c3f41524e886b7f1b8a0c1fc7321cac2/sound/oss/opl3sa.c)
+  maps the codec's second auxiliary input to the internal synth.

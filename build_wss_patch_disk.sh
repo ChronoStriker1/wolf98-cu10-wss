@@ -25,12 +25,15 @@ fi
 mkdir -p "$output_dir"
 
 nasm -f bin -l "$driver_listing" -o "$driver_bin" "$patch_dir/WSS_DRV.ASM"
-python3 "$project_dir/tools/verify_fm_driver.py" "$driver_bin"
+python3 "$project_dir/tools/verify_fm_driver.py" \
+  "$driver_bin" "$patch_dir/WSS_DRV.ASM"
 python3 "$patch_dir/patch_wolf98.py" \
   "$original_exe" "$driver_bin" "$driver_listing" "$output_exe"
 
 staged_image=$(mktemp "$output_dir/.CU10-DRV.XXXXXX")
-raw_image=$(mktemp -t cu10-wss-patch-raw).img
+raw_image_base=$(mktemp -t cu10-wss-patch-raw)
+raw_image="$raw_image_base.img"
+mv "$raw_image_base" "$raw_image"
 mount_dir=$(mktemp -d -t cu10-wss-patch-mnt)
 device_node=
 complete=0
