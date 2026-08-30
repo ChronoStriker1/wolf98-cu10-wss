@@ -8,7 +8,7 @@ original_exe="$project_dir/original/WOLF98.EXE"
 driver_bin="$output_dir/WSS_DRV.BIN"
 driver_listing="$output_dir/WSS_DRV.LST"
 output_exe="$output_dir/WOLF98.EXE"
-output_image="$output_dir/CU10-WSS.FDI"
+output_image="$output_dir/CU10-OPL.FDI"
 
 for command_name in nasm python3 unix2dos 7zz hdiutil newfs_msdos mount_msdos; do
   if ! command -v "$command_name" >/dev/null; then

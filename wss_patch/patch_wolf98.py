@@ -27,6 +27,8 @@ ENTRY_POINTS = {
     0x2F115: "driver_set_rate",
     0x2F159: "driver_set_volume",
     0x2F16C: "driver_set_pan",
+    0x2E4A3: "opl_adlib_write",
+    0x2E4CD: "opl_detect_init",
 }
 
 EXPECTED_ENTRY_BYTES = {
@@ -38,6 +40,8 @@ EXPECTED_ENTRY_BYTES = {
     0x2F115: bytes.fromhex("c8 00 00 00 56"),
     0x2F159: bytes.fromhex("c8 00 00 00 8a"),
     0x2F16C: bytes.fromhex("c8 00 00 00 8b"),
+    0x2E4A3: bytes.fromhex("c8 00 00 00 9c"),
+    0x2E4CD: bytes.fromhex("53 6a 60 6a 04"),
 }
 
 # Wolf selects one of these existing timer handlers according to its current

@@ -47,12 +47,31 @@ Its two panning arguments are attenuation values with the opposite direction:
 centered effects by about 60 dB. The WSS driver has separate conversions for
 the two calling conventions.
 
+## Native OPL FM output
+
+Wolf98 still contains its OPL2 register sequencer and IMF music data. Its
+low-level writer sends those register/value pairs to Sound Blaster-compatible
+ports `28D2h` and `29D2h`, which do not control the Cu10's onboard FM block.
+
+The replacement AdLib detector follows the CanBe Sound 2 and PC-9801-118
+extended-FM initialization sequence. It changes Sound ID `81h` to `83h`, sets
+the routing controls at `0F4Ah/0F4Bh` and `148Ah/148Bh`, and performs the
+standard OPL timer test through `1488h/1489h`. This sequence comes from the
+[Laboratory for PC-9821 reference implementation](https://darudarudan.github.io/pc9821/pc9821.html).
+
+The replacement writer passes every OPL2 register and value to `1488h/1489h`
+without translation. Wolf therefore keeps all nine melodic channels and its
+original frequency, envelope, multiplier, feedback, connection, level, and
+waveform values. Address and data writes use the delays required by the Yamaha
+OPL interface.
+
 ## P3 modifications
 
 The patcher accepts only the known SHA-256 hash. It changes:
 
 - Four P3 size and memory fields
 - Eight five-byte entry stubs for the original PCM driver
+- Two five-byte entry stubs for OPL detection and register output
 - Three timer callback addresses
 - The appended driver area beginning at load-image address `7C000h`
 

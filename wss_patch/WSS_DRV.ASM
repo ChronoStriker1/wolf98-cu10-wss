@@ -22,6 +22,17 @@ org 0x7c000
 %define DMA_CHUNK_BYTES     0x3f80
 %define SOUND_FINISHED      0x2ca0e
 
+%define SOUND_ID_PORT       0xa460
+%define PC98_IO_WAIT        0x005f
+%define CANBE_ROUTE_INDEX   0x0f4a
+%define CANBE_ROUTE_DATA    0x0f4b
+%define OPL_ADDRESS         0x1488
+%define OPL_DATA            0x1489
+%define OPL_MODE_ADDRESS    0x148a
+%define OPL_MODE_DATA       0x148b
+%define OPL_CONTROL_ADDRESS 0x148e
+%define OPL_CONTROL_DATA    0x148f
+
 ; These labels are the stable entry points used by the original Wolf98 code.
 ; The patcher replaces each old entry with a near jump to the matching label.
 
@@ -587,6 +598,195 @@ restore_codec:
     call codec_write
     ret
 
+; Wolf98 already produces a complete OPL2 register stream for its IMF music
+; and AdLib sound effects. The Cu10 exposes the OPL-compatible side of its
+; extended FM hardware at 1488h/1489h, so preserve the stream exactly instead
+; of translating nine OPL voices into six OPN voices.
+
+opl_detect_init:
+    push ebx
+    push ecx
+    push edx
+    pushfd
+    cli
+
+    ; CanBe Sound 2 and PC-9801-118 hardware must switch Sound ID to x3h before
+    ; the extended OPL interface responds. Cu10 reports 81h, so this writes 83h.
+    mov dx, SOUND_ID_PORT
+    in al, dx
+    and al, 0xf0
+    cmp al, 0x70
+    je .sound_family
+    cmp al, 0x80
+    jne .missing
+.sound_family:
+    mov bl, al
+    mov dx, OPL_CONTROL_ADDRESS
+    xor al, al
+    out dx, al
+    mov dx, OPL_CONTROL_DATA
+    in al, dx
+    test al, 0x08
+    jnz .probe
+
+    mov dx, SOUND_ID_PORT
+    mov al, bl
+    or al, 0x03
+    out dx, al
+
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, CANBE_ROUTE_INDEX
+    mov al, 0x01
+    out dx, al
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, CANBE_ROUTE_DATA
+    mov al, 0x80
+    out dx, al
+
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, OPL_MODE_ADDRESS
+    mov al, 0x05
+    out dx, al
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, OPL_MODE_DATA
+    mov al, 0x05
+    out dx, al
+
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, OPL_MODE_ADDRESS
+    mov al, 0x08
+    out dx, al
+    mov dx, PC98_IO_WAIT
+    out dx, al
+    mov dx, OPL_MODE_DATA
+    mov al, 0x04
+    out dx, al
+
+    mov ecx, 2000
+    mov dx, PC98_IO_WAIT
+.route_delay:
+    out dx, al
+    loop .route_delay
+
+    mov dx, OPL_MODE_DATA
+    xor al, al
+    out dx, al
+    mov dx, OPL_ADDRESS
+    mov al, 0xf7
+    out dx, al
+    mov dx, OPL_DATA
+    out dx, al
+
+.probe:
+    ; Standard OPL timer test. A working chip changes status from 00h to C0h.
+    mov ax, 0x6004
+    call opl_write
+    mov ax, 0x8004
+    call opl_write
+    mov dx, OPL_ADDRESS
+    in al, dx
+    mov bl, al
+
+    mov ax, 0xff02
+    call opl_write
+    mov ax, 0x2104
+    call opl_write
+    mov ecx, 125
+    mov dx, OPL_ADDRESS
+.timer_delay:
+    in al, dx
+    loop .timer_delay
+    in al, dx
+    mov bh, al
+
+    mov ax, 0x6004
+    call opl_write
+    mov ax, 0x8004
+    call opl_write
+
+    and bl, 0xe0
+    jnz .missing
+    and bh, 0xe0
+    cmp bh, 0xc0
+    jne .missing
+
+    ; Start in OPL2-compatible mode with all channels silent. Wolf then writes
+    ; its original instruments, frequencies, envelopes, and key states.
+    mov ebx, 1
+.clear_registers:
+    mov eax, ebx
+    xor ah, ah
+    call opl_write
+    inc ebx
+    cmp ebx, 0xf5
+    jbe .clear_registers
+    mov ax, 0x2001
+    call opl_write
+
+    mov byte [opl_initialized], 1
+    mov eax, 1
+    jmp .done
+.missing:
+    mov byte [opl_initialized], 0
+    xor eax, eax
+.done:
+    popfd
+    pop edx
+    pop ecx
+    pop ebx
+    ret
+
+; C calling convention: register at [EBP+8], value at [EBP+12].
+opl_adlib_write:
+    push ebp
+    mov ebp, esp
+    pushfd
+    cli
+    cmp byte [opl_initialized], 0
+    je .done
+    mov al, [ebp + 8]
+    mov ah, [ebp + 12]
+    call opl_write
+.done:
+    popfd
+    pop ebp
+    ret
+
+; AL = OPL register, AH = value. The address and data delays match Yamaha's
+; OPL timing through PC-98 I/O reads, following the CanBe/118 reference code.
+opl_write:
+    push ebx
+    push ecx
+    push edx
+    mov bx, ax
+
+    mov dx, OPL_ADDRESS
+    mov al, bl
+    out dx, al
+    mov ecx, 6
+.address_delay:
+    in al, dx
+    loop .address_delay
+
+    mov dx, OPL_DATA
+    mov al, bh
+    out dx, al
+    mov dx, OPL_ADDRESS
+    mov ecx, 35
+.data_delay:
+    in al, dx
+    loop .data_delay
+
+    pop edx
+    pop ecx
+    pop ebx
+    ret
+
 align 4, db 0
 source_offset:       dd 0
 source_selector:     dw 0
@@ -603,5 +803,6 @@ saved_reg10:         db 0
 saved_reg12:         db 0
 installed:           db 0
 active:              db 0
+opl_initialized:     db 0
 
 driver_end:

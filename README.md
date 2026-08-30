@@ -1,15 +1,20 @@
-# Wolf98 WSS sound patch for the PC-9821 Cu10
+# Wolf98 sound patch for the PC-9821 Cu10
 
 This project replaces Wolf98's PC-9801-86 PCM driver with a native WSS driver
 for the NEC PC-9821 Cu10. It restores digitized effects such as doors, gunshots,
-and guard voices while leaving the game's existing menu sounds intact.
+and guard voices. It also sends Wolf98's original OPL2 music and AdLib-style
+effects directly to the Cu10's extended OPL-compatible FM interface.
 
-The patch was verified on a real PC-9821 Cu10 with these detected resources:
+The WSS portion was verified on a real PC-9821 Cu10 with these detected
+resources:
 
 - WSS base address `0F40h`
 - Codec ID `05h`
 - IRQ12 and DMA channel 1 resource routing
 - Sound ID `81h`
+
+The native OPL path targets the documented CanBe Sound 2 extended-FM address
+and data ports `1488h` and `1489h`. It still requires verification on the Cu10.
 
 This repository contains no Wolfenstein 3D executable, game data, or patched
 floppy image. The build checks for one exact Wolf98 executable and creates the
@@ -58,10 +63,10 @@ The script creates:
 
 ```text
 out/WOLF98.EXE
-out/CU10-WSS.FDI
+out/CU10-OPL.FDI
 ```
 
-The generated executable should be `534639` bytes. Copy `CU10-WSS.FDI` to a
+Copy `CU10-OPL.FDI` to a
 Gotek USB drive and select it with FastFloppy.
 
 ## Install on the PC-9821
@@ -83,6 +88,9 @@ WOLF98
 four-disk installer used during development. Existing complete files are left
 alone. The installer replaces the old executable without retaining a backup.
 
+After starting Wolf98, open its in-game Sound menu. Select Sound Blaster under
+SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected for DIGITIZED SOUND.
+
 ## Run the standalone hardware test
 
 The standalone test contains no game code and does not require `WOLF98.EXE`:
@@ -101,13 +109,17 @@ A clean tone confirms the WSS codec and PC-98 DMA path.
 
 ## How it works
 
-The patcher verifies the original SHA-256 hash, appends the assembled WSS
-driver to the embedded Phar Lap P3 load image, redirects the eight original PCM
-entry points, and adjusts the P3 size fields without moving the original stack.
+The patcher verifies the original SHA-256 hash and appends the assembled sound
+driver to the embedded Phar Lap P3 load image. It redirects the eight original
+PCM entry points, the AdLib detector, and the AdLib register writer. It also
+adjusts the P3 size fields without moving the original stack.
 
 DMA completion is polled through Wolf98's existing timer handlers. Codec
-interrupt generation stays disabled. See [technical notes](docs/technical-notes.md)
-for the hardware and extender details.
+interrupt generation stays disabled. The FM patch selects the Cu10's extended
+FM mode and forwards each OPL2 register/value pair to `1488h/1489h`. All nine
+Wolf voices retain their original frequencies, envelopes, operators, and
+waveforms. See [technical notes](docs/technical-notes.md) for the hardware and
+extender details.
 
 ## Scope
 
