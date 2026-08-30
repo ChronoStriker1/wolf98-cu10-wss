@@ -65,6 +65,15 @@ original frequency, envelope, multiplier, feedback, connection, level, and
 waveform values. Address and data writes use the delays required by the Yamaha
 OPL interface.
 
+## Registered audio replacement
+
+The build disk includes `AUDIOHED.WL6` and `AUDIOT.WL6` extracted from the
+owner's GOG v1.4 installer. The GOG and PC-98 headers are byte-for-byte
+identical and describe the same 288 chunks. Both audio archives are 320,209
+bytes; only music chunks 273 through 276 differ. The installer stages the GOG
+pair under temporary names, removes the installed pair, and renames the staged
+files. It does not keep backups.
+
 ## P3 modifications
 
 The patcher accepts only the known SHA-256 hash. It changes:

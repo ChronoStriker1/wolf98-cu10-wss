@@ -51,6 +51,8 @@ Place your original executable here:
 
 ```text
 original/WOLF98.EXE
+original/AUDIOHED.WL6
+original/AUDIOT.WL6
 ```
 
 Then run:
@@ -59,15 +61,18 @@ Then run:
 ./build_wss_patch_disk.sh
 ```
 
+Use the registered audio files from an owned GOG or DOS release. The current
+build accepts the hashes from GOG installer `1.4 (28045)`. These files remain
+ignored by Git and are not distributed by this repository.
+
 The script creates:
 
 ```text
 out/WOLF98.EXE
-out/CU10-OPL.FDI
+out/CU10-GOG.FDI
 ```
 
-Copy `CU10-OPL.FDI` to a
-Gotek USB drive and select it with FastFloppy.
+Copy `CU10-GOG.FDI` to a Gotek USB drive and select it with FastFloppy.
 
 ## Install on the PC-9821
 
@@ -86,7 +91,8 @@ WOLF98
 
 `PATCH.BAT` also joins the split `VSWAP` and `98GRAPH` files produced by the
 four-disk installer used during development. Existing complete files are left
-alone. The installer replaces the old executable without retaining a backup.
+alone. The installer replaces the executable and registered audio pair without
+retaining backups.
 
 After starting Wolf98, open its in-game Sound menu. Select Sound Blaster under
 SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected for DIGITIZED SOUND.

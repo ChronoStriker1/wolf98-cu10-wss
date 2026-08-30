@@ -5,10 +5,12 @@ project_dir=${0:A:h}
 patch_dir="$project_dir/wss_patch"
 output_dir="$project_dir/out"
 original_exe="$project_dir/original/WOLF98.EXE"
+donor_audiohed="$project_dir/original/AUDIOHED.WL6"
+donor_audiot="$project_dir/original/AUDIOT.WL6"
 driver_bin="$output_dir/WSS_DRV.BIN"
 driver_listing="$output_dir/WSS_DRV.LST"
 output_exe="$output_dir/WOLF98.EXE"
-output_image="$output_dir/CU10-OPL.FDI"
+output_image="$output_dir/CU10-GOG.FDI"
 
 for command_name in nasm python3 unix2dos 7zz hdiutil newfs_msdos mount_msdos; do
   if ! command -v "$command_name" >/dev/null; then
@@ -19,6 +21,22 @@ done
 
 if [[ ! -f "$original_exe" ]]; then
   print -u2 "Place the supported original at: $original_exe"
+  exit 1
+fi
+
+if [[ ! -f "$donor_audiohed" || ! -f "$donor_audiot" ]]; then
+  print -u2 "Place registered AUDIOHED.WL6 and AUDIOT.WL6 in: $project_dir/original"
+  exit 1
+fi
+
+expected_audiohed="16e21eab17af2062019cc85cc271f887191301d1aa6de04b1afac5998aad9d9c"
+expected_audiot="2cc23cb811df16e656f1fea25cd2629859c1ec9997d35bc3b1776594094b67ef"
+actual_audiohed=$(shasum -a 256 "$donor_audiohed" | awk '{print $1}')
+actual_audiot=$(shasum -a 256 "$donor_audiot" | awk '{print $1}')
+if [[ "$actual_audiohed" != "$expected_audiohed" || "$actual_audiot" != "$expected_audiot" ]]; then
+  print -u2 "Refusing an unknown registered audio archive."
+  print -u2 "AUDIOHED.WL6: $actual_audiohed"
+  print -u2 "AUDIOT.WL6:   $actual_audiot"
   exit 1
 fi
 
@@ -57,6 +75,8 @@ device_node=$(print -r -- "$attach_output" | awk 'NR == 1 {print $1}')
 newfs_msdos -F 12 -S 1024 -c 1 -e 192 -m 0xfe -a 2 -u 8 -h 2 -s 1232 "$device_node" >/dev/null
 mount_msdos "$device_node" "$mount_dir"
 COPYFILE_DISABLE=1 cp "$output_exe" "$mount_dir/WOLF98.EXE"
+COPYFILE_DISABLE=1 cp "$donor_audiohed" "$mount_dir/AUDIOHED.WL6"
+COPYFILE_DISABLE=1 cp "$donor_audiot" "$mount_dir/AUDIOT.WL6"
 unix2dos -q -n "$patch_dir/PATCH.BAT" "$mount_dir/PATCH.BAT"
 unix2dos -q -n "$patch_dir/README.TXT" "$mount_dir/README.TXT"
 sync
