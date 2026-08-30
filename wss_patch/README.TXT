@@ -14,8 +14,8 @@ PATCH also joins VSWAP.00 plus VSWAP.01 into VSWAP.WL6 and joins
 98GRA.00 plus 98GRA.01 into 98GRAPH.WL6. The split pieces are removed
 after each joined file is copied successfully.
 
-The PC-98 audio pair is staged under temporary names before the installed
-pair is replaced. No backup audio files are retained.
+The installed PC-98 audio pair is deleted and copied directly. This avoids
+requiring duplicate free space on B:. No backup audio files are retained.
 
 After starting Wolfenstein 3D, open the in-game Sound menu. Select Sound
 Blaster under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected under

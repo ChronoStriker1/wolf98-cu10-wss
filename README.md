@@ -93,10 +93,10 @@ The script creates:
 
 ```text
 out/WOLF98.EXE
-out/CU10-SA1.FDI
+out/CU10-R2.FDI
 ```
 
-Copy `CU10-SA1.FDI` to a Gotek USB drive and select it with FastFloppy.
+Copy `CU10-R2.FDI` to a Gotek USB drive and select it with FastFloppy.
 
 ## Install on the PC-9821
 
@@ -115,8 +115,9 @@ WOLF98
 
 `PATCH.BAT` also joins the split `VSWAP` and `98GRAPH` files produced by the
 four-disk installer used during development. Existing complete files are left
-alone. The installer replaces the executable and restores the matching PC-98
-audio pair without retaining backups.
+alone. The installer deletes and directly replaces the executable and matching
+PC-98 audio pair without retaining backups or requiring duplicate staging
+space on `B:`.
 
 After starting Wolfenstein 3D, open its in-game Sound menu. Select Sound Blaster
 under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected for DIGITIZED SOUND.
