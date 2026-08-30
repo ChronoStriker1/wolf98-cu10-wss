@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add the Cu10 WSS driver to the known Wolf98 executable."""
+"""Add the Cu10 sound driver to the known PC-98 Wolfenstein 3D executable."""
 
 from __future__ import annotations
 
@@ -44,8 +44,8 @@ EXPECTED_ENTRY_BYTES = {
     0x2E4CD: bytes.fromhex("53 6a 60 6a 04"),
 }
 
-# Wolf selects one of these existing timer handlers according to its current
-# speaker/music mode. Redirect every choice through a WSS DMA poll wrapper.
+# Wolfenstein 3D selects one of these timer handlers according to its current
+# speaker and music modes. Redirect every choice through a WSS DMA poll wrapper.
 TIMER_CALLBACKS = {
     0x2B955: ("timer_wrapper_7000", 0x2D86D),
     0x2B96C: ("timer_wrapper_700", 0x2D8DD),

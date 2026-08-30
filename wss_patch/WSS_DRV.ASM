@@ -33,7 +33,7 @@ org 0x7c000
 %define OPL_CONTROL_ADDRESS 0x148e
 %define OPL_CONTROL_DATA    0x148f
 
-; These labels are the stable entry points used by the original Wolf98 code.
+; These labels are the stable entry points used by PC-98 Wolfenstein 3D.
 ; The patcher replaces each old entry with a near jump to the matching label.
 
 driver_detect:
@@ -199,8 +199,8 @@ driver_stop:
     ret
 
 driver_set_rate:
-    ; Wolf requests roughly 7 kHz. The closest standard WSS rate is fixed at
-    ; 8 kHz during initialization, so this legacy 86-board selector is unused.
+    ; Wolfenstein 3D requests roughly 7 kHz. The closest standard WSS rate is
+    ; fixed at 8 kHz, so this legacy 86-board selector is unused.
     ret
 
 driver_set_volume:
@@ -238,7 +238,7 @@ driver_set_pan:
     pop ebp
     ret
 
-; EAX is a Wolf volume from 0 through 15. Return CS4231 attenuation in AL.
+; EAX is a Wolfenstein 3D volume from 0 through 15. Return CS4231 attenuation.
 volume_to_attenuation:
     test eax, eax
     jns .not_negative
@@ -253,7 +253,7 @@ volume_to_attenuation:
     shl eax, 2
     ret
 
-; Wolf's pan arguments are attenuation values: 0 is loud and 15 is silent.
+; The game's pan arguments are attenuation values: 0 is loud and 15 is silent.
 ; Map each side directly to the CS4231's 0-through-60 dB attenuation range.
 pan_to_attenuation:
     test eax, eax
@@ -367,7 +367,7 @@ stop_hardware:
     mov dword [bytes_remaining], 0
     ret
 
-; Poll DMA terminal count from Wolf's existing timer interrupt. This keeps
+; Poll DMA terminal count from Wolfenstein 3D's timer interrupt. This keeps
 ; playback asynchronous without installing another protected-mode handler.
 wss_poll:
     cmp byte [installed], 0
@@ -598,10 +598,10 @@ restore_codec:
     call codec_write
     ret
 
-; Wolf98 already produces a complete OPL2 register stream for its IMF music
-; and AdLib sound effects. The Cu10 exposes the OPL-compatible side of its
-; extended FM hardware at 1488h/1489h, so preserve the stream exactly instead
-; of translating nine OPL voices into six OPN voices.
+; Wolfenstein 3D produces a complete OPL2 register stream for its IMF music
+; and AdLib sound effects. The Cu10 exposes its YMF701 OPL3 bank 0 at
+; 1488h/1489h, so reuse the OPL2 register layout instead of translating the
+; instruments into the separate OPN-compatible FM mode.
 
 opl_detect_init:
     push ebx
@@ -715,7 +715,7 @@ opl_detect_init:
     cmp bh, 0xc0
     jne .missing
 
-    ; Start in OPL2-compatible mode with all channels silent. Wolf then writes
+    ; Start in OPL2-compatible mode with all channels silent. The game writes
     ; its original instruments, frequencies, envelopes, and key states.
     mov ebx, 1
 .clear_registers:
@@ -751,10 +751,10 @@ opl_adlib_write:
     je .done
     mov al, [ebp + 8]
     mov ah, [ebp + 12]
-    ; The CanBe/YMF701 handoff leaves the synth in OPL3 mode. Wolf supplies
+    ; The CanBe/YMF701 handoff leaves the synth in OPL3 mode. The game supplies
     ; OPL2 C0h-C8h values, whose upper nibble is always zero. On OPL3 that
     ; clears the left/right output enables and can mute whole channels.
-    ; Route every one of Wolf's nine channels to both stereo outputs while
+    ; Route all nine OPL2 channel slots to both stereo outputs while
     ; preserving its feedback and connection bits.
     cmp al, 0xc0
     jb .write

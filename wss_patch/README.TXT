@@ -1,9 +1,10 @@
-Wolf98 PC-9821 Cu10 WSS and native OPL sound patch
+Wolfenstein 3D PC-9821 Cu10 WSS and FM sound patch
 
-This disk is only for the Wolf98 version installed by the CU10 disks.
-It uses WSS for digitized effects. Wolf's original OPL music and
-AdLib-style sound effects go to the Cu10 extended FM interface. Wolf's
-nine OPL2 channels are enabled on both OPL3 stereo outputs.
+This disk patches the PC-98 Wolfenstein 3D executable WOLF98.EXE.
+It uses WSS for digitized effects. The game's original OPL2 music and
+AdLib sound effects use the OPL3 synthesizer in the Cu10 YMF701 OPL3-SA.
+The patch uses OPL3 bank 0 in its OPL2-compatible layout. It does not
+convert the music to OPL3 bank 1 or four-operator instruments.
 It also replaces AUDIOHED.WL6 and AUDIOT.WL6 with the matching
 registered files extracted from the owner's GOG release.
 
@@ -17,6 +18,6 @@ after each joined file is copied successfully.
 The registered audio pair is staged under temporary names before the
 installed pair is replaced. No backup audio files are retained.
 
-After starting Wolf98, open the in-game Sound menu. Select Sound Blaster
-under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected under
+After starting Wolfenstein 3D, open the in-game Sound menu. Select Sound
+Blaster under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected under
 DIGITIZED SOUND.
