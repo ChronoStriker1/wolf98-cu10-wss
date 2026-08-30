@@ -70,12 +70,10 @@ Python 3 and zsh are also required.
 
 ## Build the patch disk
 
-Place your original PC-98 files here:
+Place your original PC-98 executable here:
 
 ```text
 original/WOLF98.EXE
-original/AUDIOHED.WL6
-original/AUDIOT.WL6
 ```
 
 Then run:
@@ -84,19 +82,14 @@ Then run:
 ./build_wss_patch_disk.sh
 ```
 
-The audio pair must come from the supported PC-98 release. It is restored by
-the installer so a previously tested DOS/GOG archive cannot remain mixed with
-the PC-98 executable. These files remain ignored by Git and are not distributed
-by this repository.
-
 The script creates:
 
 ```text
 out/WOLF98.EXE
-out/CU10-R2.FDI
+out/CU10-DRV.FDI
 ```
 
-Copy `CU10-R2.FDI` to a Gotek USB drive and select it with FastFloppy.
+Copy `CU10-DRV.FDI` to a Gotek USB drive and select it with FastFloppy.
 
 ## Install on the PC-9821
 
@@ -113,11 +106,8 @@ CD \WOLF3D
 WOLF98
 ```
 
-`PATCH.BAT` also joins the split `VSWAP` and `98GRAPH` files produced by the
-four-disk installer used during development. Existing complete files are left
-alone. The installer deletes and directly replaces the executable and matching
-PC-98 audio pair without retaining backups or requiring duplicate staging
-space on `B:`.
+`PATCH.BAT` replaces only `WOLF98.EXE`. It does not change the installed audio,
+graphics, maps, or `VSWAP` data and does not retain an executable backup.
 
 After starting Wolfenstein 3D, open its in-game Sound menu. Select Sound Blaster
 under SOUND EFFECTS and MUSIC. Keep PC-9821 PCM selected for DIGITIZED SOUND.

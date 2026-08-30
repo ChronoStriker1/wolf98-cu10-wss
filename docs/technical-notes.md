@@ -91,12 +91,13 @@ address-delay reads and 42 data-delay reads. The earlier 35-read delay was too
 short and could drop register writes, which presents as missing notes or whole
 instruments.
 
-## PC-98 audio restoration
+## Game data isolation
 
 The GOG-audio substitution was an unsuccessful diagnostic and has been removed.
-The build disk now carries the matching audio pair from the supported PC-98
-release. The installer deletes and directly replaces each installed audio file,
-so it does not need space for a second 320 KB archive. It does not keep backups.
+The patch disk replaces only `WOLF98.EXE`; it does not carry or modify either
+audio archive or other game data. This isolates hardware-driver testing from
+data-file changes. The installer removes only `.NEW` remnants from the earlier
+failed staging attempt and does not keep an executable backup.
 
 ## P3 modifications
 
